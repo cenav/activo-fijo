@@ -297,7 +297,7 @@ CREATE OR REPLACE PACKAGE BODY depreciacion AS
              WHERE m.id_moneda IN ('S', 'D')
                AND a.cod_estado BETWEEN '1' AND '8'
                AND a.depreciable = 'S'
-               --AND a.cod_activo_fijo = 'MAQ1GEN-020'
+               --AND a.cod_activo_fijo IN ('MQ2MATR-070-INST2', 'MQ2MATR-070-INST3')
              ORDER BY a.cod_activo_fijo;
     BEGIN
         init(p_periodo_ano, p_periodo_mes);
