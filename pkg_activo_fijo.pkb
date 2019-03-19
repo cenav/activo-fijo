@@ -1,4 +1,6 @@
 CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
+    param paramaf%ROWTYPE;
+
     PROCEDURE reclasifica(p_cod_activo_fijo activo_fijo_reclasifica.cod_activo_fijo%TYPE
                          , p_cod_ubc_destino activo_fijo_reclasifica.cod_ubc_destino%TYPE
                          , p_cod_motivo activo_fijo_reclasifica.cod_motivo%TYPE
@@ -16,7 +18,7 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
             IF l_afijo.cod_ubicacion = p_cod_ubc_destino THEN
                 errpkg.raise_error(pkg_activo_fijo_err.en_ubicaciones_iguales);
             END IF;
-        END valida;
+        END;
 
         PROCEDURE procesa_data IS
         BEGIN
@@ -28,7 +30,7 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
             l_reclas.cod_ubc_destino := p_cod_ubc_destino;
             l_reclas.creacion_usuario := USER;
             l_reclas.creacion_fecha := SYSDATE;
-        END procesa_data;
+        END;
 
         PROCEDURE guarda_y_actualiza IS
         BEGIN
@@ -36,7 +38,7 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
 
             api_activo_fijo_reclasifica.ins(l_reclas);
             api_activo_fijo.upd(l_afijo);
-        END guarda_y_actualiza;
+        END;
     BEGIN
         l_afijo := api_activo_fijo.onerow(p_cod_activo_fijo);
         valida();
@@ -54,8 +56,7 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
             RAISE;
     END;
 
-    FUNCTION esta_en_almacen(caf activo_fijo.cod_activo_fijo%TYPE)
-        RETURN BOOLEAN IS
+    FUNCTION esta_en_almacen(caf activo_fijo.cod_activo_fijo%TYPE) RETURN BOOLEAN IS
         c PLS_INTEGER := 0;
     BEGIN
         SELECT COUNT(*) INTO c
@@ -115,13 +116,11 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
 
     PROCEDURE valida_activacion(af activo_fijo%ROWTYPE) IS
     BEGIN
-        IF af.porcentaje_nif IS NULL
-            OR af.porcentaje_nif = 0 THEN
+        IF af.porcentaje_nif IS NULL OR af.porcentaje_nif = 0 THEN
             raise_application_error(pkg_activo_fijo_err.en_cargar_porc, pkg_activo_fijo_err.em_cargar_porc || ' ' || af.cod_activo_fijo);
         END IF;
 
-        IF NVL(af.valor_adquisicion_s, 0) = 0
-            OR NVL(af.valor_adquisicion_d, 0) = 0 THEN
+        IF NVL(af.valor_adquisicion_s, 0) = 0 OR NVL(af.valor_adquisicion_d, 0) = 0 THEN
             raise_application_error(pkg_activo_fijo_err.en_cargar_adqui, pkg_activo_fijo_err.em_cargar_adqui || ' ' || af.cod_activo_fijo);
         END IF;
     END;
@@ -148,8 +147,7 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         COMMIT;
     END;
 
-    FUNCTION correlativo_subclase(p_padre activo_fijo.cod_adicion%TYPE, p_subclase activo_fijo.cod_subclase%TYPE)
-        RETURN PLS_INTEGER IS
+    FUNCTION correlativo_subclase(p_padre activo_fijo.cod_adicion%TYPE, p_subclase activo_fijo.cod_subclase%TYPE) RETURN PLS_INTEGER IS
         correlativo PLS_INTEGER := 0;
     BEGIN
         SELECT COUNT(*) + 1 INTO correlativo
@@ -159,4 +157,21 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
 
         RETURN correlativo;
     END;
+
+    FUNCTION valor_ingreso_almacen(p_afijo activo_fijo.cod_activo_fijo%TYPE) RETURN otm.T_VALOR IS
+        valor otm.T_VALOR;
+    BEGIN
+        SELECT costo_s, costo_d INTO valor
+          FROM kardex_d
+         WHERE cod_alm = param.almacen_activo_fijo
+           AND tp_transac = '11'
+           AND cod_art = p_afijo;
+
+        RETURN valor;
+    EXCEPTION
+        WHEN no_data_found THEN valor := NULL;
+        WHEN dup_val_on_index THEN valor := NULL;
+    END;
+BEGIN
+    param := api_paramaf.onerow();
 END pkg_activo_fijo;
