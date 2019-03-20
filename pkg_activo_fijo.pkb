@@ -108,19 +108,19 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         kd.estado := 0;
         kd.origen := 'P';
         kd.ing_sal := 'S';
-        kd.pr_referencia := 'ACTIVACION ACTIVO FIJO';
+        kd.pr_referencia := 'ACTIVACION ACTIVO FIJOw';
 
         api_kardex_d.ins(kd);
         kxg := kg;
     END;
 
-    PROCEDURE valida_activacion(af activo_fijo%ROWTYPE) IS
+    PROCEDURE valida_activacion(af activo_fijo%ROWTYPE, valor otm.T_VALOR) IS
     BEGIN
         IF af.porcentaje_nif IS NULL OR af.porcentaje_nif = 0 THEN
             raise_application_error(pkg_activo_fijo_err.en_cargar_porc, pkg_activo_fijo_err.em_cargar_porc || ' ' || af.cod_activo_fijo);
         END IF;
 
-        IF NVL(af.valor_adquisicion_s, 0) = 0 OR NVL(af.valor_adquisicion_d, 0) = 0 THEN
+        IF NVL(valor.soles, 0) = 0 OR NVL(valor.dolares, 0) = 0 THEN
             raise_application_error(pkg_activo_fijo_err.en_cargar_adqui, pkg_activo_fijo_err.em_cargar_adqui || ' ' || af.cod_activo_fijo);
         END IF;
     END;
@@ -128,9 +128,11 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
     PROCEDURE activar(caf activo_fijo.cod_activo_fijo%TYPE, fch activo_fijo.fecha_activacion%TYPE) IS
         af activo_fijo%ROWTYPE;
         kg kardex_g%ROWTYPE;
+        valor otm.T_VALOR;
     BEGIN
         af := api_activo_fijo.onerow(caf);
-        valida_activacion(af);
+        valor := valor_ingreso_almacen(caf);
+        valida_activacion(af, valor);
 
         IF esta_en_almacen(caf) THEN
             realiza_salida(caf, fch, kg);
@@ -172,6 +174,6 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         WHEN no_data_found THEN valor := NULL;
         WHEN dup_val_on_index THEN valor := NULL;
     END;
-BEGIN
+    BEGIN
     param := api_paramaf.onerow();
 END pkg_activo_fijo;
