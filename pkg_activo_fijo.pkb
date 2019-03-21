@@ -108,20 +108,25 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         kd.estado := 0;
         kd.origen := 'P';
         kd.ing_sal := 'S';
-        kd.pr_referencia := 'ACTIVACION ACTIVO FIJOw';
+        kd.pr_referencia := 'ACTIVACION ACTIVO FIJO';
 
         api_kardex_d.ins(kd);
         --kxg := kg;
     END;
 
-    PROCEDURE actualiza_activo(af IN OUT activo_fijo%ROWTYPE, kg kardex_g%ROWTYPE, fch DATE) IS
+    PROCEDURE actualiza_activo(af IN OUT activo_fijo%ROWTYPE, kg kardex_g%ROWTYPE, fch DATE, val otm.T_VALOR) IS
     BEGIN
         af.cod_estado := pkg_activo_fijo_cst.c_estado_activado;
+        IF af.fecha_adquisicion IS NULL THEN
+            af.fecha_adquisicion := fecha_adquisicion(af.cod_activo_fijo);
+        END IF;
         af.fecha_activacion := fch;
         af.activacion_almacen := kg.cod_alm;
         af.activacion_tp_transac := kg.tp_transac;
         af.activacion_serie := kg.serie;
         af.activacion_numero := kg.numero;
+        af.valor_adquisicion_s := val.soles;
+        af.valor_adquisicion_d := val.dolares;
         api_activo_fijo.upd(af);
     END;
 
@@ -153,7 +158,7 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
 
         IF validacion_ok(af, valor) THEN
             realiza_salida(caf, fch, kg);
-            actualiza_activo(af, kg, fch);
+            actualiza_activo(af, kg, fch, valor);
             COMMIT;
         END IF;
     END;
@@ -182,6 +187,22 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
     EXCEPTION
         WHEN no_data_found THEN valor := NULL;
         WHEN dup_val_on_index THEN valor := NULL;
+    END;
+
+    FUNCTION fecha_adquisicion(caf activo_fijo.cod_activo_fijo%TYPE) RETURN DATE IS
+        fch DATE;
+    BEGIN
+        SELECT o.fecha INTO fch
+          FROM orden_de_compra o
+               JOIN itemord i ON o.serie = i.serie AND o.num_ped = i.num_ped
+         WHERE i.cod_art = caf;
+
+        RETURN fch;
+    EXCEPTION
+        WHEN no_data_found THEN
+            RETURN NULL;
+        WHEN too_many_rows THEN
+            RETURN NULL;
     END;
     BEGIN
     param := api_paramaf.onerow();
