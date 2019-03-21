@@ -66,8 +66,8 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         RETURN c > 0;
     END;
 
-    PROCEDURE realiza_salida(caf activo_fijo.cod_activo_fijo%TYPE, fch activo_fijo.fecha_activacion%TYPE, kxg OUT kardex_g%ROWTYPE) IS
-        kg kardex_g%ROWTYPE;
+    PROCEDURE realiza_salida(caf activo_fijo.cod_activo_fijo%TYPE, fch activo_fijo.fecha_activacion%TYPE, kg OUT kardex_g%ROWTYPE) IS
+        --kg kardex_g%ROWTYPE;
         kd kardex_d%ROWTYPE;
     BEGIN
         SELECT almacen_activo_fijo INTO kg.cod_alm FROM param_util;
@@ -111,10 +111,21 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         kd.pr_referencia := 'ACTIVACION ACTIVO FIJOw';
 
         api_kardex_d.ins(kd);
-        kxg := kg;
+        --kxg := kg;
     END;
 
-    PROCEDURE valida_activacion(af activo_fijo%ROWTYPE, valor otm.T_VALOR) IS
+    PROCEDURE actualiza_activo(af IN OUT activo_fijo%ROWTYPE, kg kardex_g%ROWTYPE, fch DATE) IS
+    BEGIN
+        af.cod_estado := pkg_activo_fijo_cst.c_estado_activado;
+        af.fecha_activacion := fch;
+        af.activacion_almacen := kg.cod_alm;
+        af.activacion_tp_transac := kg.tp_transac;
+        af.activacion_serie := kg.serie;
+        af.activacion_numero := kg.numero;
+        api_activo_fijo.upd(af);
+    END;
+
+    FUNCTION validacion_ok(af activo_fijo%ROWTYPE, valor otm.T_VALOR) RETURN BOOLEAN IS
     BEGIN
         IF af.porcentaje_nif IS NULL OR af.porcentaje_nif = 0 THEN
             raise_application_error(pkg_activo_fijo_err.en_cargar_porc, pkg_activo_fijo_err.em_cargar_porc || ' ' || af.cod_activo_fijo);
@@ -123,6 +134,13 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         IF NVL(valor.soles, 0) = 0 OR NVL(valor.dolares, 0) = 0 THEN
             raise_application_error(pkg_activo_fijo_err.en_cargar_adqui, pkg_activo_fijo_err.em_cargar_adqui || ' ' || af.cod_activo_fijo);
         END IF;
+
+        IF NOT esta_en_almacen(af.cod_activo_fijo) THEN
+            raise_application_error(pkg_activo_fijo_err.en_no_esta_en_almacen,
+                                    pkg_activo_fijo_err.en_no_esta_en_almacen || ' ' || af.cod_activo_fijo);
+        END IF;
+
+        RETURN TRUE;
     END;
 
     PROCEDURE activar(caf activo_fijo.cod_activo_fijo%TYPE, fch activo_fijo.fecha_activacion%TYPE) IS
@@ -132,21 +150,12 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
     BEGIN
         af := api_activo_fijo.onerow(caf);
         valor := valor_ingreso_almacen(caf);
-        valida_activacion(af, valor);
 
-        IF esta_en_almacen(caf) THEN
+        IF validacion_ok(af, valor) THEN
             realiza_salida(caf, fch, kg);
+            actualiza_activo(af, kg, fch);
+            COMMIT;
         END IF;
-
-        af.cod_estado := pkg_activo_fijo_cst.c_estado_activado;
-        af.fecha_activacion := fch;
-        af.activacion_almacen := kg.cod_alm;
-        af.activacion_tp_transac := kg.tp_transac;
-        af.activacion_serie := kg.serie;
-        af.activacion_numero := kg.numero;
-        api_activo_fijo.upd(af);
-
-        COMMIT;
     END;
 
     FUNCTION correlativo_subclase(p_padre activo_fijo.cod_adicion%TYPE, p_subclase activo_fijo.cod_subclase%TYPE) RETURN PLS_INTEGER IS
