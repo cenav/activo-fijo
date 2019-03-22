@@ -56,6 +56,32 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
             RAISE;
     END;
 
+    PROCEDURE envia_correo_activacion(af activo_fijo%ROWTYPE) IS
+        CURSOR cr_correos IS
+            SELECT correo
+              FROM notificacion
+             WHERE sistema = 'ACTIVO_FIJO'
+               AND proceso = 'ACTIVACION';
+
+        mail pkg_types.CORREO;
+        s VARCHAR2(10) := '-';
+        asiento activo_fijo_asiento%ROWTYPE;
+    BEGIN
+        asiento := api_activo_fijo_asiento.ONEROW(af.cod_activo_fijo, 'ACTIVO');
+        mail.asunto := 'Activación de código ' || af.cod_activo_fijo;
+        mail.de := 'sistemas@pevisa.com.pe';
+        mail.texto := 'Se ha activado el siguiente activo fijo:' || chr(10) || chr(10);
+        mail.texto := rtrim(mail.texto) || 'Código: ' || af.cod_activo_fijo || chr(10);
+        mail.texto := rtrim(mail.texto) || 'Descripción: ' || af.descripcion || chr(10);
+        mail.texto := rtrim(mail.texto) || 'Fecha activación: ' || to_char(af.fecha_activacion, 'DD/MM/YYYY') || chr(10);
+        mail.texto := rtrim(mail.texto) || 'Asiento Contable: ' || asiento.ano || s || asiento.mes || s || asiento.libro || s ||
+                      asiento.voucher || chr(10);
+
+        FOR r IN cr_correos LOOP
+            enviar_correo(mail.de, r.correo, mail.asunto, mail.texto);
+        END LOOP;
+    END;
+
     FUNCTION esta_en_almacen(caf activo_fijo.cod_activo_fijo%TYPE) RETURN BOOLEAN IS
         c PLS_INTEGER := 0;
     BEGIN
@@ -67,29 +93,21 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
     END;
 
     PROCEDURE realiza_salida(caf activo_fijo.cod_activo_fijo%TYPE, fch activo_fijo.fecha_activacion%TYPE, kg OUT kardex_g%ROWTYPE) IS
-        --kg kardex_g%ROWTYPE;
         kd kardex_d%ROWTYPE;
     BEGIN
-        SELECT almacen_activo_fijo INTO kg.cod_alm FROM param_util;
-
+        kg.cod_alm := param.almacen_activo_fijo;
         kg.tp_transac := pkg_activo_fijo_cst.c_salida_transac;
         kg.serie := pkg_activo_fijo_cst.c_salida_serie;
         kg.numero := api_kardex_g.next_numero(pkg_activo_fijo_cst.c_salida_transac, pkg_activo_fijo_cst.c_salida_serie);
         kg.fch_transac := fch;
-        kg.tip_doc_ref := NULL; --todo
-        kg.ser_doc_ref := NULL; --todo
-        kg.nro_doc_ref := NULL; --todo
         kg.glosa := 'Salida por activacion de activo fijo ' || caf;
-        kg.tp_relacion := 'C';
-        kg.nro_lista := 1;
         kg.por_desc1 := 0;
         kg.por_desc2 := 0;
-        kg.motivo := 1;
-        kg.estado := 0;
-        kg.origen := 'P';
+        kg.motivo := '1';
+        kg.estado := '0';
+        kg.origen := 'I';
         kg.ing_sal := 'S';
-        kg.flg_impr := 0;
-        kg.num_importa := 'SM :1 ' || kg.nro_doc_ref;
+        kg.flg_impr := '0';
 
         api_kardex_g.ins(kg);
 
@@ -105,16 +123,15 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         kd.por_desc1 := 0;
         kd.por_desc2 := 0;
         kd.imp_vvb := 0;
-        kd.estado := 0;
-        kd.origen := 'P';
+        kd.estado := '0';
+        kd.origen := 'I';
         kd.ing_sal := 'S';
         kd.pr_referencia := 'ACTIVACION ACTIVO FIJO';
 
         api_kardex_d.ins(kd);
-        --kxg := kg;
     END;
 
-    PROCEDURE actualiza_activo(af IN OUT activo_fijo%ROWTYPE, kg kardex_g%ROWTYPE, fch DATE, val otm.T_VALOR) IS
+    PROCEDURE actualiza_activo(af IN OUT activo_fijo%ROWTYPE, fch DATE, kg kardex_g%ROWTYPE, val otm.T_VALOR) IS
     BEGIN
         af.cod_estado := pkg_activo_fijo_cst.c_estado_activado;
         IF af.fecha_adquisicion IS NULL THEN
@@ -158,7 +175,9 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
 
         IF validacion_ok(af, valor) THEN
             realiza_salida(caf, fch, kg);
-            actualiza_activo(af, kg, fch, valor);
+            actualiza_activo(af, fch, kg, valor);
+            pkg_afijo_asiento.activacion(af, fch);
+            envia_correo_activacion(af);
             COMMIT;
         END IF;
     END;
@@ -199,10 +218,8 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
 
         RETURN fch;
     EXCEPTION
-        WHEN no_data_found THEN
-            RETURN NULL;
-        WHEN too_many_rows THEN
-            RETURN NULL;
+        WHEN no_data_found THEN RETURN NULL;
+        WHEN too_many_rows THEN RETURN NULL;
     END;
     BEGIN
     param := api_paramaf.onerow();
