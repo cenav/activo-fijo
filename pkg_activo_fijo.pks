@@ -11,4 +11,6 @@ CREATE OR REPLACE PACKAGE pevisa.pkg_activo_fijo AS
     FUNCTION valor_ingreso_almacen(p_afijo activo_fijo.cod_activo_fijo%TYPE) RETURN otm.T_VALOR;
 
     FUNCTION fecha_adquisicion(caf activo_fijo.cod_activo_fijo%TYPE) RETURN DATE;
+
+    FUNCTION fecha_ingreso_almacen(caf activo_fijo.cod_activo_fijo%TYPE) RETURN DATE;
 END pkg_activo_fijo;

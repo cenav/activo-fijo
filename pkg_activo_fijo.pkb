@@ -221,6 +221,25 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         WHEN no_data_found THEN RETURN NULL;
         WHEN too_many_rows THEN RETURN NULL;
     END;
+
+    FUNCTION fecha_ingreso_almacen(caf activo_fijo.cod_activo_fijo%TYPE) RETURN DATE IS
+        fch DATE;
+    BEGIN
+        SELECT g.fch_transac INTO fch
+          FROM kardex_g g
+               JOIN kardex_d d ON g.cod_alm = d.cod_alm
+              AND g.tp_transac = d.tp_transac
+              AND g.serie = d.serie
+              AND g.numero = d.numero
+         WHERE g.cod_alm = param.almacen_activo_fijo
+           AND g.tp_transac = '11'
+           AND d.cod_art = caf;
+
+        RETURN fch;
+    EXCEPTION
+        WHEN no_data_found THEN RETURN NULL;
+        WHEN too_many_rows THEN RETURN NULL;
+    END;
     BEGIN
     param := api_paramaf.onerow();
 END pkg_activo_fijo;
