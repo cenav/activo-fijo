@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE BODY pkg_afijo_asiento AS
+`CREATE OR REPLACE PACKAGE BODY pkg_afijo_asiento AS
     PROCEDURE activacion(af activo_fijo%ROWTYPE, fch DATE) AS
         -- Constantes
         c_moneda CONSTANT VARCHAR2(1) := 'S';
@@ -52,7 +52,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_afijo_asiento AS
             md.mes := g_mes;
             md.libro := g_libro;
             md.voucher := g_voucher;
-            md.cuenta := g_param.cuenta_maquina_activo;
+            md.cuenta := g_param.cuenta_otros_activos;
             md.tipo_cambio := pkg_asiento.c_tipo_cambio;
             md.relacion := af.centro_costo;
             md.nro_referencia := af.cod_activo_fijo;
