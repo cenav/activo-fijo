@@ -55,7 +55,7 @@
             md.cuenta := g_param.cuenta_otros_activos;
             md.tipo_cambio := pkg_asiento.c_tipo_cambio;
             md.relacion := af.centro_costo;
-            md.nro_referencia := af.cod_activo_fijo;
+            md.nro_referencia := substr(af.cod_activo_fijo, 0, 20);
             md.fecha := fch;
             md.detalle := af.cod_activo_fijo;
             md.cargo_s := af.valor_adquisicion_s;
