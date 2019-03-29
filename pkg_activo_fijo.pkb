@@ -100,7 +100,7 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
         kg.serie := pkg_activo_fijo_cst.c_salida_serie;
         kg.numero := api_kardex_g.next_numero(pkg_activo_fijo_cst.c_salida_transac, pkg_activo_fijo_cst.c_salida_serie);
         kg.fch_transac := fch;
-        kg.glosa := 'Salida por activacion de activo fijo ' || caf;
+        kg.glosa := SUBSTR('Salida por activacion de activo fijo ' || caf, 0, 60);
         kg.por_desc1 := 0;
         kg.por_desc2 := 0;
         kg.motivo := '1';
