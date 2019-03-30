@@ -210,11 +210,25 @@ CREATE OR REPLACE PACKAGE BODY pevisa.pkg_activo_fijo AS
 
     FUNCTION fecha_adquisicion(caf activo_fijo.cod_activo_fijo%TYPE) RETURN DATE IS
         fch DATE;
+        af activo_fijo%ROWTYPE;
+        es_nacional BOOLEAN;
+        es_importado BOOLEAN;
     BEGIN
-        SELECT o.fecha INTO fch
-          FROM orden_de_compra o
-               JOIN itemord i ON o.serie = i.serie AND o.num_ped = i.num_ped
-         WHERE i.cod_art = caf;
+        af := api_activo_fijo.ONEROW(caf);
+        es_nacional := af.origen = 'NAC';
+        es_importado := af.origen = 'IMP';
+
+        IF es_nacional THEN
+            SELECT o.fecha INTO fch
+              FROM orden_de_compra o
+                   JOIN itemord i ON o.serie = i.serie AND o.num_ped = i.num_ped
+             WHERE i.cod_art = caf;
+        ELSIF es_importado THEN
+            SELECT p.fecha INTO fch
+              FROM lg_pedjam p
+                   JOIN lg_itemjam i ON p.num_importa = i.num_importa
+             WHERE i.cod_art = caf;
+        END IF;
 
         RETURN fch;
     EXCEPTION
