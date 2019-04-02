@@ -8,10 +8,9 @@ DECLARE
     art   pcarticul%ROWTYPE;
     clase activo_fijo_clase%ROWTYPE;
 BEGIN
-
     art.cod_art := :new.cod_activo_fijo;
     art.descripcion := substr(:new.descripcion, 0, 100);
-    clase := api_activo_fijo_clase.ONEROW(:new.cod_clase);
+    clase := api_activo_fijo_clase.onerow(:new.cod_clase);
     art.linea := clase.linea;
     art.und := 'UND';
     art.partida := '11111111';
@@ -27,6 +26,5 @@ BEGIN
     art.indicador := 'CL'; -- CL = Compra Local Producto Terminado
     art.cod_unx := :new.cod_activo_fijo;
 
-    --     api_pcarticul.INS(art);
-    sys.dbms_output.PUT_LINE(rpad('Articulo:', 12) || art.cod_art);
+    api_pcarticul.ins(art);
 END;
