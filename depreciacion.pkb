@@ -70,16 +70,15 @@ CREATE OR REPLACE PACKAGE BODY depreciacion AS
         l_depre_mensual NUMBER := 0;
         l_valor_adqui NUMBER := 0;
         l_valor_residual NUMBER := 0;
-        c_porc_niif CONSTANT NUMBER := 10;
     BEGIN
         l_afijo_depre.cod_activo_fijo := p_activo_fijo.cod_activo_fijo;
         l_afijo_depre.cod_tipo_depreciacion := pkg_activo_fijo_cst.c_niif;
         l_afijo_depre.moneda := p_moneda;
         l_afijo_depre.fecha := g_fecha_fin;
-        l_afijo_depre.porcentaje := NVL(p_activo_fijo.porcentaje_nif, c_porc_niif);
+        l_afijo_depre.porcentaje := p_activo_fijo.porcentaje_nif;
         l_valor_adqui := CASE p_moneda WHEN 'S' THEN p_activo_fijo.valor_adquisicion_s WHEN 'D' THEN p_activo_fijo.valor_adquisicion_d END;
         l_valor_residual := CASE p_moneda WHEN 'S' THEN p_activo_fijo.valor_residual_s WHEN 'D' THEN p_activo_fijo.valor_residual_d END;
-        l_depre_anual := ROUND(c_porc_niif * (l_valor_adqui - l_valor_residual) / 100, 2);
+        l_depre_anual := ROUND(p_activo_fijo.porcentaje_nif * (l_valor_adqui - l_valor_residual) / 100, 2);
         l_depre_mensual := ROUND(l_depre_anual / 12, 2);
         l_afijo_depre.depreciacion_anual := l_depre_anual;
         l_afijo_depre.depreciacion := l_depre_mensual;
