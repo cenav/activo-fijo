@@ -1,4 +1,4 @@
-`CREATE OR REPLACE PACKAGE BODY pkg_afijo_asiento AS
+CREATE OR REPLACE PACKAGE BODY pkg_afijo_asiento AS
     PROCEDURE activacion(af activo_fijo%ROWTYPE, fch DATE) AS
         -- Constantes
         c_moneda CONSTANT VARCHAR2(1) := 'S';
@@ -54,14 +54,17 @@
             md.voucher := g_voucher;
             md.cuenta := g_param.cuenta_otros_activos;
             md.tipo_cambio := pkg_asiento.c_tipo_cambio;
+            md.tipo_relacion := 'U';
             md.relacion := af.centro_costo;
+            md.tipo_referencia := '00';
+            md.serie := '0000';
             md.nro_referencia := substr(af.cod_activo_fijo, 0, 20);
             md.fecha := fch;
             md.detalle := af.cod_activo_fijo;
-            md.cargo_s := af.valor_adquisicion_s;
-            md.cargo_d := af.valor_adquisicion_d;
-            md.abono_s := 0;
-            md.abono_d := 0;
+            md.cargo_s := 0;
+            md.cargo_d := 0;
+            md.abono_s := af.valor_adquisicion_s;
+            md.abono_d := af.valor_adquisicion_d;
             md.estado := pkg_asiento.c_estado;
             md.columna := api_plancta.onerow(md.cuenta).col_compras;
             md.generado := api_plancta.genera_automaticos(md.cuenta);
@@ -81,17 +84,19 @@
             md.mes := g_mes;
             md.libro := g_libro;
             md.voucher := g_voucher;
-            md.cuenta := api_activo_fijo_cuenta.onerow(af.cod_activo_fijo, 'NIF', 'S').cuenta_activo;
+            md.cuenta := af.cuenta_contable;
             md.tipo_cambio := pkg_asiento.c_tipo_cambio;
             md.tipo_relacion := 'U';
             md.relacion := af.centro_costo;
+            md.tipo_referencia := '00';
+            md.serie := '0000';
             md.nro_referencia := substr(af.cod_activo_fijo, 0, 20);
             md.fecha := fch;
             md.detalle := af.cod_activo_fijo;
-            md.cargo_s := 0;
-            md.cargo_d := 0;
-            md.abono_s := af.valor_adquisicion_s;
-            md.abono_d := af.valor_adquisicion_d;
+            md.cargo_s := af.valor_adquisicion_s;
+            md.cargo_d := af.valor_adquisicion_d;
+            md.abono_s := 0;
+            md.abono_d := 0;
             md.estado := pkg_asiento.c_estado;
             md.columna := api_plancta.onerow(md.cuenta).col_compras;
             md.generado := api_plancta.genera_automaticos(md.cuenta);
