@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE pevisa.pkg_activo_fijo AS
+CREATE OR REPLACE PACKAGE PEVISA.pkg_activo_fijo AS
     PROCEDURE reclasifica(p_cod_activo_fijo activo_fijo_reclasifica.cod_activo_fijo%TYPE
                          , p_cod_ubc_destino activo_fijo_reclasifica.cod_ubc_destino%TYPE
                          , p_cod_motivo activo_fijo_reclasifica.cod_motivo%TYPE
@@ -13,4 +13,7 @@ CREATE OR REPLACE PACKAGE pevisa.pkg_activo_fijo AS
     FUNCTION fecha_adquisicion(caf activo_fijo.cod_activo_fijo%TYPE) RETURN DATE;
 
     FUNCTION fecha_ingreso_almacen(caf activo_fijo.cod_activo_fijo%TYPE) RETURN DATE;
+
+    FUNCTION nuevo_codigo(p_padre activo_fijo.cod_adicion%TYPE, p_subclase activo_fijo.cod_subclase%TYPE) RETURN VARCHAR2;
 END pkg_activo_fijo;
+/
